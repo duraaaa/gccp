@@ -1,5 +1,7 @@
 package gc;
 
+import java.util.ArrayList;
+
 /**
  * A reference-counting heap.
  */
@@ -13,6 +15,12 @@ public class RefCountHeap extends Heap {
 
 	public void endScope() {
 		// TODO decrease counters
+		ArrayList<Var> l = (ArrayList<Var>)currentScope();
+
+		for (Var var : l) {
+			decreaseCounter(var.addr);
+		}
+
 		super.endScope();
 	}
 
@@ -36,21 +44,42 @@ public class RefCountHeap extends Heap {
 
 	public void readField(Var v1, Var v2, int fieldOffset) {
 		// TODO decrease counter
+		if(!v1.isNull())
+			decreaseCounter(v1.addr);
+
 		super.readField(v1, v2, fieldOffset);
+
 		// TODO increase counter
+		increaseCounter(v1.addr);
 	}
 
 	public void writeField(Var v1, int fieldOffset, Var v2) {
 		// TODO decrease counter
+
+		if(data[v1.addr+fieldOffset]!=-1)
+			decreaseCounter(data[v1.addr+fieldOffset]);
+
 		super.writeField(v1, fieldOffset, v2);
+
 		// TODO increase counter
+		increaseCounter(data[v1.addr+fieldOffset]);
 	}
 
 	private void increaseCounter(int addr) {
 		// TODO
+		if(addr<0) return;
+		data[addr+COUNTER]++;
 	}
 
 	private void decreaseCounter(int addr) {
 		// TODO
+		data[addr+COUNTER]--;
+		if(data[addr+COUNTER]==0){
+			for(int i=0; i<data[addr+SIZE]; i++){
+				if(data[addr+i]!=-1)
+					decreaseCounter(data[addr+i]);
+			}
+			freelist.release(addr-2,data[addr+SIZE]+2);
+		}
 	}
 }

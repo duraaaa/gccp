@@ -49,14 +49,56 @@ public class CopyCollectHeap extends Heap {
 
 	public void allocate(Var v, int size) throws InsufficientMemory {
 		// TODO
+		try {
+			if (Math.abs(fromSpace-toSpace) < allocPtr-toSpace + size + 2) throw new InsufficientMemory();
+			v.addr = allocPtr + 2;
+			data[v.addr+SIZE] = size;
+			data[v.addr+FORWARD] = -1;
+			for(int i=v.addr; i<v.addr+size; ++i) data[i] = -1;
+			allocPtr += (size+2);
+		}catch(InsufficientMemory e){
+			collect();
+			if (Math.abs(fromSpace-toSpace) < allocPtr-toSpace + size + 2) throw new InsufficientMemory();
+			v.addr = allocPtr + 2;
+			data[v.addr+SIZE] = size;
+			data[v.addr+FORWARD] = -1;
+			for(int i=v.addr; i<v.addr+size; ++i) data[i] = -1;
+			allocPtr += (size+2);
+		}
 	}
 
 	private void collect() {
 		// TODO
+
+		allocPtr = fromSpace;
+		for(Var var : reachable){
+			if(!var.isNull())
+				var.addr = copy(var.addr);
+		}
+
+		int temp = toSpace;
+		toSpace = fromSpace;
+		fromSpace = temp;
 	}
 
 	private int copy(int addr) {
 		// TODO
-		return 0;
+		if(data[addr+FORWARD]!=-1) return data[addr+FORWARD];
+
+		int temp = allocPtr+2;
+		data[addr+FORWARD] = allocPtr+2;
+		allocPtr += (data[addr+SIZE]+2);
+		for(int i = temp; i < temp + data[addr+SIZE]; ++i){
+			if(data[addr+i-temp]<0) {
+				data[i] = data[addr+i-temp];
+			}
+			else {
+				data[i] = copy(data[addr+i-temp]);
+			}
+		}
+		data[temp+SIZE] = data[addr+SIZE];
+		data[temp+FORWARD] = -1;
+
+		return data[addr+FORWARD];
 	}
 }
